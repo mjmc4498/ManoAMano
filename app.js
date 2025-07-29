@@ -4,7 +4,7 @@ import {
     HandLandmarker,
     FilesetResolver
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js";
-import { Gestures, isPeaceSign, isHelloSign } from './classifier.js';
+import { Gestures, isPeaceSign, isHelloSign, isThankYouSign, isIlySign } from './classifier.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     // Referencias a los elementos del DOM
@@ -12,9 +12,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const canvasElement = document.getElementById('output-canvas');
     const canvasCtx = canvasElement.getContext('2d');
     const resultText = document.getElementById('result-text');
+    const audioToggleButton = document.getElementById('audio-toggle');
 
     let handLandmarker;
     let lastVideoTime = -1;
+    let lastSpokenGesture = null;
+    let isAudioEnabled = false;
+
+    /**
+     * Usa la Web Speech API para pronunciar un texto.
+     * @param {string} text - El texto a pronunciar.
+     */
+    const speak = (text) => {
+        if ('speechSynthesis' in window) {
+            // Limpia la cola de síntesis para evitar que se acumulen frases.
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'es-ES'; // Configura el idioma a español
+            window.speechSynthesis.speak(utterance);
+        } else {
+            console.error("La API de Síntesis de Voz no es soportada en este navegador.");
+        }
+    };
 
     /**
      * Inicializa el modelo HandLandmarker de MediaPipe.
@@ -38,6 +58,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Inicializa el modelo al cargar la página
     await createHandLandmarker();
+
+    // Configura el botón de audio
+    audioToggleButton.classList.add('off'); // Estado inicial apagado
+    audioToggleButton.addEventListener('click', () => {
+        isAudioEnabled = !isAudioEnabled;
+        audioToggleButton.classList.toggle('off');
+
+        // Si se apaga el audio, cancela cualquier locución pendiente
+        if (!isAudioEnabled) {
+            window.speechSynthesis.cancel();
+        }
+    });
 
     // Activa la cámara web del usuario
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -89,7 +121,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Clasifica el gesto de la primera mano detectada
                 const firstHandLandmarks = results.landmarks[0];
                 let detectedGesture = "No se detecta seña";
-                if (isPeaceSign(firstHandLandmarks)) {
+
+                if (isIlySign(firstHandLandmarks)) {
+                    detectedGesture = Gestures.I_LOVE_YOU;
+                } else if (isThankYouSign(firstHandLandmarks)) {
+                    detectedGesture = Gestures.THANK_YOU;
+                } else if (isPeaceSign(firstHandLandmarks)) {
                     detectedGesture = Gestures.PEACE;
                 } else if (isHelloSign(firstHandLandmarks)) {
                     detectedGesture = Gestures.HELLO;
@@ -98,8 +135,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Muestra el resultado
                 resultText.textContent = detectedGesture;
 
+                // Habla el resultado si el audio está activado, es una seña nueva y no es la de "no detecta"
+                if (isAudioEnabled && detectedGesture !== "No se detecta seña" && detectedGesture !== lastSpokenGesture) {
+                    speak(detectedGesture);
+                    lastSpokenGesture = detectedGesture;
+                } else if (detectedGesture === "No se detecta seña") {
+                    lastSpokenGesture = null; // Resetea si no hay seña
+                }
+
             } else {
                 resultText.textContent = "No se detectan manos";
+                lastSpokenGesture = null; // Resetea si no hay manos
             }
             canvasCtx.restore();
         }

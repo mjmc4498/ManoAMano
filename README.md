@@ -9,6 +9,10 @@ Este es un prototipo de una aplicación web diseñada para traducir la Lengua de
 - **Clasificador Básico de Señas:** Incluye un clasificador simple basado en reglas (heurísticas) que puede reconocer las siguientes señas estáticas:
     - **Paz** (✌️)
     - **Hola** (mano abierta 👋)
+    - **Gracias** (🙏)
+    - **Te Quiero** (🤟)
+- **Síntesis de Voz:** Utiliza la Web Speech API para pronunciar las traducciones en voz alta.
+- **Control de Audio:** Incluye un botón para activar o desactivar la síntesis de voz.
 - **Interfaz Web Simple:** Una interfaz de usuario limpia que muestra el stream de la cámara y el resultado de la traducción de texto.
 
 ## Cómo Ejecutarlo
